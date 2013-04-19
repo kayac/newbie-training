@@ -1,0 +1,159 @@
+.TH http_load 1 "15 November 2001"
+.SH NAME
+http_load - multiprocessing http test client
+.SH SYNOPSIS
+.B http_load
+.RB [ -checksum ]
+.RB [ -throttle ]
+.RB [ -proxy
+.IR host:port ]
+.RB [ -verbose ]
+.RB [ -timeout
+.IR secs ]
+.RB [ -sip
+.IR sip_file ]
+.RB [ -cipher
+.IR str ]
+.RI (
+.BI -parallel
+.IR N
+.RI |
+.BI -rate
+.IR N
+.RB [ -jitter ]
+.RI )
+.RI (
+.BI -fetches
+.IR N
+.RI |
+.BI -seconds
+.IR N
+.RI )
+.I url_file
+.SH DESCRIPTION
+.PP
+.I http_load
+runs multiple http fetches in parallel, to test the throughput
+of a web server.
+However unlike most such test clients, it runs in a single process,
+so it doesn't bog down the client machine.
+It can be configured to do https fetches as well.
+.PP
+The -checksum flag tells
+.I http_load
+to do checksums on the files fetched, to make sure they came across ok.
+The checksums are computed the first time each URL gets fetched,
+and then recomputed and compared on each subsequent fetch.
+Without the -checksum flag only the byte count is checked.
+.PP
+The -throttle flag tells
+.I http_load
+to throttle its consumption of data to 33.6Kbps, to simulate access
+by modem users.
+.PP
+The -proxy flag lets you run http_load through a web proxy.
+.PP
+The -verbose flag tells
+.I http_load
+to put out progress reports every minute on stderr.
+.PP
+The -timeout flag specifies how long to wait on idle connections before
+giving up.
+The default is 60 seconds.
+.PP
+The -sip flag lets you specify a file containing numeric IP addresses
+(not hostnames), one per line.
+These get used randomly as the *source* address of connections.
+They must be real routable addresses on your machine, created
+with ifconfig, in order for this to work.
+The advantage of using this option is you can make one client machine
+look like a whole bank of machines, as far as the server knows.
+.PP
+The -cipher flag is only available if you have SSL support compiled in.
+It specifies a cipher set to use.
+By default, http_load will negotiate the highest security that the server
+has available, which is often higher (and slower) than typical browsers
+will negotiate.
+An example of a cipher set might be "RC4-MD5" - this will run
+considerably faster than the default.
+In addition to specifying a raw cipher string, there are three built-in
+cipher sets accessible by keywords:
+.nf
+  * fastsec - fast security - RC4-MD5
+  * highsec - high security - DES-CBC3-SHA
+  * paranoid - ultra high security - AES256-SHA
+.fi
+Of course, not all servers are guaranteed to implement these combinations.
+.PP
+One start specifier, either -parallel or -rate, is required.
+-parallel tells
+.I http_load
+to keep that many parallel fetches going simultaneously.
+-rate tells
+.I http_load
+to start that many new connections each second.
+If you use the -rate start specifier, you can also give the -jitter
+flag, telling
+.I http_load
+to vary the rate randomly by about 10%.
+.PP
+One end specifier, either -fetches or -seconds, is required.
+-fetches tells
+.I http_load
+to quit when that many fetches have been completed.
+-seconds tells
+.I http_load
+to quit after that many seconds have elapsed.
+.PP
+The url_file is just a list of URLs, one per line.
+The URLs that get fetched are chosen randomly from this file.
+.PP
+All flags may be abbreviated to a single letter.
+.PP
+Note that while the end specifier is obeyed precisely, the start specifier
+is only approximate.
+If you use the -rate flag,
+.I http_load
+will make its best effort to start connections at that rate, but may
+not succeed.
+And if you use the -parallel flag,
+.I http_load
+will attempt to keep that many simultaneous connections going, but
+may fail to keep up if the server is very fast.
+.PP
+Sample run:
+.nf
+    % http_load -rate 2 -seconds 300 urls
+    591 fetches, 8 max parallel, 5.33606e+06 bytes, in 300 seconds
+    9028.87 mean bytes/connection
+    1.97 fetches/sec, 17786.9 bytes/sec
+    msecs/connect: 28.8932 mean, 44.243 max, 24.488 min
+    msecs/first-response: 63.5362 mean, 81.624 max, 57.803 min
+    HTTP response codes:
+      code 200 -- 591
+.fi
+.SH "SEE ALSO"
+http_ping(1)
+.SH AUTHOR
+Copyright © 1998,1999,2001 by Jef Poskanzer <jef@mail.acme.com>.
+All rights reserved.
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.

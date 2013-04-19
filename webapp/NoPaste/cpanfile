@@ -1,0 +1,16 @@
+requires 'Amon2', '>=3.78';
+requires 'Amon2::Lite', '>=0.09';
+requires 'Text::Xslate', '>=1.5006';
+requires 'Plack::Session', '>=0.14';
+requires 'FormValidator::Lite';
+requires 'Crypt::SaltedHash';
+requires 'Log::Minimal';
+requires 'Amon2::Plugin::DBI';
+requires 'HTML::FillInForm::Lite';
+test_requires 'Plack::Test';
+test_requires 'Test::mysqld';
+test_requires 'Path::Class';
+test_requires 'HTML::TreeBuilder::XPath';
+test_requires 'HTML::Selector::XPath';
+test_requires 'Log::Minimal';
+test_requires 'Test::Pretty';

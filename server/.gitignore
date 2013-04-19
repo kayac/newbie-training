@@ -1,0 +1,4 @@
+*~
+rake.out
+spec/*.newgrad.kayac
+vendor/*

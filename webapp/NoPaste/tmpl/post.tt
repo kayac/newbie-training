@@ -1,0 +1,23 @@
+[% WRAPPER "wrapper.tt" %]
+    <div class="container-fluid">
+      <div class="row-fluid">
+        [% INCLUDE "sidebar.tt" %]
+        <div class="span9">
+          <div class="hero-unit">
+            <div>
+              <p>by [% post.username %] at [% post.created_at %]</p>
+              <form action="[% uri_for('/star/') %][% post.id %]" method="post">
+                [% IF c().session.get('username') %]
+                <button class="btn btn-primary" id="add_star"><i class="icon-star icon-white"></i>＋</button>
+                [% ELSE %]
+                <a href="[% uri_for('/signin') %]" class="btn">sign in to add Star</a>
+                [% END %]
+              [% IF post.stars > 0 %]<i class="icon-star"></i>[% post.stars %][% END %]
+              <pre>[% post.content %]</pre>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+[% END %]

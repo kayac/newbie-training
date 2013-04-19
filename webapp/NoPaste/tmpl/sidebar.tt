@@ -1,0 +1,14 @@
+        <div class="span3">
+          <div class="well sidebar-nav">
+            <ul class="nav nav-list">
+              <li class="nav-header">Recent Posts</li>
+              [% FOR p IN recent_posts %]
+              <li>
+                <a href="[% uri_for('/post/') %][% p.id | uri %]"><i class="icon-file"></i>[% p.headline | truncate(20, '...') %] by [% p.username %]
+                  [% IF p.stars > 0 %]<i class="icon-star"></i>[% p.stars %][% END %]
+                </a>
+              </li>
+              [% END %]
+            </ul>
+          </div><!--/.well -->
+        </div><!--/span-->

@@ -1,0 +1,69 @@
+[% WRAPPER "wrapper.tt" %]
+ <style type="text/css">
+      body {
+        padding-top: 40px;
+        padding-bottom: 40px;
+        background-color: #f5f5f5;
+      }
+
+      .form-signin {
+        max-width: 600px;
+        padding: 19px 29px 29px;
+        margin: 0 auto 20px;
+        background-color: #fff;
+        border: 1px solid #e5e5e5;
+        -webkit-border-radius: 5px;
+           -moz-border-radius: 5px;
+                border-radius: 5px;
+        -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.05);
+           -moz-box-shadow: 0 1px 2px rgba(0,0,0,.05);
+                box-shadow: 0 1px 2px rgba(0,0,0,.05);
+      }
+      .form-signin .form-signin-heading,
+      .form-signin .checkbox {
+        margin-bottom: 10px;
+      }
+      .form-signin input[type="text"],
+      .form-signin input[type="password"] {
+        max-width: 300px;
+        font-size: 16px;
+        height: auto;
+        margin-bottom: 15px;
+        padding: 7px 9px;
+      }
+    </style>
+    <div class="container">
+      <form class="form-signin form-horizontal" action="[% uri_for('/signup') %]" method="post">
+        <h2 class="form-signin-heading">Sign up now!</h2>
+
+        <div class="control-group [% errors.username ? 'error' : '' %]">
+          <input type="text" class="input-block-level" placeholder="username" name="username">
+          [% FOR error IN errors.username.keys() %]
+          <span class="help-inline">
+            [% SWITCH error %]
+              [% CASE "EXISTS" %]Already exists
+              [% CASE DEFAULT %][% error %]
+            [% END %]
+          </span>
+          [% END %]
+        </div>
+
+        <div class="control-group [% errors.password ? 'error' : '' %]">
+          <input type="password" class="input-block-level" placeholder="password" name="password">
+          <input type="password" class="input-block-level" placeholder="password confirm" name="password_confirm">
+          [% FOR error IN errors.password.keys() %]
+          <span class="help-inline">
+            [% SWITCH error %]
+              [% CASE "NOT_NULL" %]Required
+              [% CASE "DUPLICATION" %]Confirm mismatch
+              [% CASE "LENGTH" %]Invalid length
+              [% CASE DEFAULT %][% error %]
+            [% END %]
+          </span>
+          [% END %]
+
+        </div>
+        <button class="btn btn-large btn-primary" type="submit">Sign up now!</button>
+      </form>
+    </div> <!-- /container -->
+[% END %]

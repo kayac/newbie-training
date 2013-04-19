@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# make_test_files - create a set of files for use with http_load
+#
+# This creates a specified number of files that are either a kilobyte
+# or a megabyte in length.  The files are named kNNN and mNNN.
+
+if [ $# -ne 2 ] ; then
+    echo "usage:  $0 #kfiles #mfiles" >&2
+    exit 1
+fi
+
+kfiles="$1"
+mfiles="$2"
+
+tmp=mtf.$$
+ktmp=ktmp.$$
+mtmp=mtmp.$$
+rm -f $tmp $ktmp $mtmp
+
+if [ "$kfiles" -gt 0 ] ; then
+    echo "123456789012345678901234567890123456789012345678901234567890123" > $ktmp
+    cat $ktmp $ktmp $ktmp $ktmp > $tmp
+    cat $tmp $tmp $tmp $tmp > $ktmp
+    i=1
+    while [ $i -le "$kfiles" ] ; do
+	cp $ktmp "k$i"
+	i=`expr "$i" + 1`
+    done
+fi
+
+if [ "$mfiles" -gt 0 ] ; then
+    echo "123456789012345678901234567890123456789012345678901234567890123" > $mtmp
+    cat $mtmp $mtmp $mtmp $mtmp $mtmp $mtmp $mtmp $mtmp > $tmp
+    cat $tmp $tmp $tmp $tmp $tmp $tmp $tmp $tmp > $mtmp
+    cat $mtmp $mtmp $mtmp $mtmp $mtmp $mtmp $mtmp $mtmp > $tmp
+    cat $tmp $tmp $tmp $tmp $tmp $tmp $tmp $tmp > $mtmp
+    cat $mtmp $mtmp > $tmp
+    cat $tmp $tmp > $mtmp
+    i=1
+    while [ $i -le "$mfiles" ] ; do
+	cp $mtmp "m$i"
+	i=`expr "$i" + 1`
+    done
+fi
+
+rm -f $tmp $ktmp $mtmp

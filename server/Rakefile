@@ -1,0 +1,15 @@
+require 'rake'
+require 'rspec/core/rake_task'
+require 'httpclient'
+
+task :default => :spec
+
+host = ENV["host"]
+
+RSpec::Core::RakeTask.new(:spec) do |t|
+  t.pattern = "spec/#{host}/server_spec.rb"
+end
+
+RSpec::Core::RakeTask.new(:example_spec) do |t|
+  t.pattern = "spec/#{host}/example_spec.rb"
+end

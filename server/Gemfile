@@ -1,0 +1,6 @@
+source "https://rubygems.org"
+
+gem "serverspec", ">=0.1.4"
+gem "httpclient"
+gem "rspec"
+gem "knife-solo"

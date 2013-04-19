@@ -1,0 +1,6 @@
+{
+  "run_list": ["example"],
+  "example": {
+    "text": "World"
+  }
+}

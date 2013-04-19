@@ -1,0 +1,11 @@
+requires "Capture::Tiny";
+requires "HTML::Selector::XPath";
+requires "HTML::TreeBuilder::XPath";
+requires "Furl";
+requires "HTTP::Request::Common";
+requires "List::Util";
+requires "Parallel::Benchmark";
+requires "Path::Class";
+requires "String::Random";
+requires "Plack";
+requires "Test::mysqld";

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+BRANCH=$(git branch |grep "^*" |awk '{print $2}')
+
+perl isucon.pl $BRANCH

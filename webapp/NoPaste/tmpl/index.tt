@@ -1,0 +1,34 @@
+[% WRAPPER "wrapper.tt" %]
+    <div class="container-fluid">
+      <div class="row-fluid">
+        [% INCLUDE "sidebar.tt" %]
+        <div class="span9">
+          <div class="hero-unit">
+            <h2>NoPaste!!</h2>
+              [% IF c().session.get('username') %]
+              <form action="[% uri_for('/post') %]" method="post">
+                <div class="control-group [% errors.content ? 'error' : '' %]">
+                  <textarea style="width: 90%; height: 300px;" name="content"></textarea>
+                [% FOR error IN errors.content.keys() %]
+                <span class="help-inline">
+                  [% SWITCH error %]
+                  [% CASE "NOT_NULL" %]Required
+                  [% END %]
+                </span>
+                [% END %]
+                </div>
+                <div class="control-group">
+                  <input type="submit" value="post" class="btn btn-primary">
+                </div>
+              </form>
+              [% ELSE %]
+                <p>
+                  <a class="btn btn-primary" href="[% uri_for('/signin') %]">Please sign in</a>
+                </p>
+              [% END %]
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+[% END %]

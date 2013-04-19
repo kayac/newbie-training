@@ -1,0 +1,275 @@
+package NoPaste;
+
+use strict;
+use warnings;
+use utf8;
+use File::Spec;
+use File::Basename;
+use lib File::Spec->catdir(dirname(__FILE__), 'extlib', 'lib', 'perl5');
+use lib File::Spec->catdir(dirname(__FILE__), 'lib');
+use Amon2::Lite;
+use Plack::Session::Store::File;
+use FormValidator::Lite;
+use Crypt::SaltedHash;
+use Log::Minimal;
+
+our $VERSION = '0.01';
+our $DSN = [
+    'dbi:mysql:database=test',
+    'root',
+    '',
+];
+
+# put your configuration here
+sub load_config {
+    my $c = shift;
+    +{
+        DBI => $DSN,
+        recent_posts_limit => 100,
+    }
+}
+
+sub recent_posts {
+    my ($c) = @_;
+
+    my $posts = $c->dbh->selectall_arrayref(
+        "SELECT id, user_id, content FROM posts ORDER BY created_at DESC LIMIT ?",
+        {},
+        $c->config->{recent_posts_limit},
+    );
+    my @recent_posts;
+    for my $post (@{$posts}) {
+        my $user = $c->dbh->selectrow_arrayref(
+            "SELECT username FROM users WHERE id=?",
+            {},
+            $post->[1],
+        );
+        my $stars_count = 0;
+        my $stars = $c->dbh->selectall_arrayref(
+            "SELECT * FROM stars WHERE post_id=?",
+            {},
+            $post->[0],
+        );
+        $stars_count++ for @{$stars};
+
+        push @recent_posts, {
+            id       => $post->[0],
+            username => $user->[0],
+            stars    => $stars_count,
+            headline => substr($post->[2], 0, 30),
+        };
+    }
+    \@recent_posts;
+}
+
+get '/' => sub {
+    my $c = shift;
+
+    return $c->render('index.tt', {
+        recent_posts => $c->recent_posts(),
+    });
+};
+
+post '/post' => sub {
+    my $c = shift;
+
+    my $validator = FormValidator::Lite->new($c->req);
+    my $result    = $validator->check(
+        content => [ qw/ NOT_NULL / ],
+    );
+    my $username  = $c->session->get("username");
+    if ( !defined $username ) {
+        return $c->create_response( 400, [], [ "invalid request" ] );
+    }
+
+    if ( $validator->has_error ) {
+        $c->fillin_form($c->req);
+        return $c->render('index.tt', {
+            errors       => $validator->errors,
+            recent_posts => $c->recent_posts(),
+        });
+    }
+
+    my $user = $c->dbh->selectrow_arrayref(
+        "SELECT id FROM users WHERE username=?",
+        {}, $username,
+    );
+    my $user_id = $user->[0];
+    my $content = $c->req->param("content");
+    $c->dbh->do(
+        "INSERT INTO posts (user_id, content) VALUES (?, ?)",
+        {},
+        $user_id, $content,
+    );
+    my $post_id = $c->dbh->{'mysql_insertid'};
+    return $c->redirect("/post/$post_id");
+};
+
+get '/post/:id' => sub {
+    my ($c, $args) = @_;
+
+    my $post_id = $args->{id};
+    my $post = $c->dbh->selectrow_arrayref(
+        "SELECT id, user_id, content, created_at FROM posts WHERE id=?",
+        {},
+        $post_id,
+    );
+    return $c->res_404 unless $post;
+
+    my $user = $c->dbh->selectrow_arrayref(
+        "SELECT username FROM users WHERE id=?",
+        {},
+        $post->[1],
+    );
+
+    my $stars_count = 0;
+    my $stars = $c->dbh->selectall_arrayref(
+        "SELECT * FROM stars WHERE post_id=?",
+        {},
+        $post->[0],
+    );
+    $stars_count++ for @{$stars};
+
+    $c->render('post.tt', {
+        post => {
+            id         => $post->[0],
+            content    => $post->[2],
+            username   => $user->[0],
+            stars      => $stars_count,
+            created_at => $post->[3],
+        },
+        recent_posts => $c->recent_posts(),
+    });
+};
+
+post '/star/:id' => sub {
+    my ($c, $args) = @_;
+
+    my $username = $c->session->get("username");
+    unless ($username) {
+        return $c->create_response( 400, [], [ "invalid request" ] );
+    }
+
+    my $post_id = $args->{id};
+    my $post = $c->dbh->selectrow_arrayref(
+        "SELECT id, user_id, content, created_at FROM posts WHERE id=?",
+        {},
+        $post_id,
+    );
+    return $c->res_404 unless $post;
+
+    my $user = $c->dbh->selectrow_arrayref(
+        "SELECT id FROM users WHERE username=?",
+        {}, $username,
+    );
+    my $user_id = $user->[0];
+
+    $c->dbh->do(
+        "INSERT INTO stars (post_id, user_id) VALUES (?, ?)",
+        {},
+        $post_id, $user_id,
+    );
+    return $c->redirect("/post/$post_id");
+};
+
+get '/signin' => sub {
+    my $c = shift;
+    return $c->render('signin.tt');
+};
+
+get '/signout' => sub {
+    my $c = shift;
+    $c->session->expire;
+    return $c->redirect('/');
+};
+
+post '/signin' => sub {
+    my $c = shift;
+    my $username  = $c->req->param("username");
+    my $password  = $c->req->param("password");
+
+    my $row = $c->dbh->selectrow_arrayref(
+        "SELECT password FROM users WHERE username=? LIMIT 1",
+        {},
+        $username,
+    );
+    if ( $row && Crypt::SaltedHash->validate( $row->[0], $password ) ) {
+        infof "signin success username: %s", $username;
+        $c->session->set( username => $username );
+        # session fixation 対策で session id を再生成する
+        $c->req->session_options->{change_id}++;
+        return $c->redirect("/");
+    }
+    else {
+        my $validator = FormValidator::Lite->new($c->req);
+        $validator->set_error( login => "FAILED" );
+        warnf "signin failed username: %s", $username;
+        $c->fillin_form($c->req);
+        return $c->render('signin.tt', { errors => $validator->errors });
+    }
+};
+
+get '/signup' => sub {
+    my $c = shift;
+    return $c->render('signup.tt');
+};
+
+post '/signup' => sub {
+    my $c = shift;
+
+    my $username = $c->req->param("username");
+
+    # see http://search.cpan.org/dist/FormValidator-Lite/lib/FormValidator/Lite.pm
+    # and http://search.cpan.org/dist/FormValidator-Lite/lib/FormValidator/Lite/Constraint/Default.pm
+    my $validator = FormValidator::Lite->new($c->req);
+
+    my $result = $validator->check(
+        username => [ qw/ NOT_NULL /, [ REGEXP => qr/\A[a-zA-Z0-9]{2,20}\z/ ] ],
+        password => [ qw/ NOT_NULL ASCII /, [ qw/ LENGTH 2 20 / ] ],
+        { password => [qw/password password_confirm/] } => ['DUPLICATION'],
+    );
+    my $users = $c->dbh->selectrow_arrayref(
+        "SELECT count(*) FROM users WHERE username=?",
+        {},
+        $username,
+    );
+    if ( $users->[0] ) {
+        $validator->set_error( username => "EXISTS" );
+    }
+    if ( $validator->has_error ) {
+        debugf "signup validate error: %s", ddf $validator->errors;
+        $c->fillin_form($c->req);
+        return $c->render('signup.tt', { errors => $validator->errors });
+    }
+
+    my $csh = Crypt::SaltedHash->new( algorithm => 'SHA-1' );
+    $csh->add( $c->req->param("password") );
+    my $salted = $csh->generate;
+
+    $c->dbh->do(
+        "INSERT INTO users (username, password) VALUES (?, ?)",
+        {},
+        $username, $salted,
+    );
+
+    infof "signup success: username: %s", $username;
+    $c->session->set( username => $username );
+    return $c->redirect('/');
+};
+
+
+# load plugins
+__PACKAGE__->load_plugin('Web::CSRFDefender');
+__PACKAGE__->load_plugin('DBI');
+__PACKAGE__->load_plugin('Web::FillInFormLite');
+# __PACKAGE__->load_plugin('Web::JSON');
+
+__PACKAGE__->enable_session(
+    store => Plack::Session::Store::File->new( dir => "./tmp" ),
+);
+
+__PACKAGE__->to_app(handle_static => 1);
+
+__DATA__
+
+

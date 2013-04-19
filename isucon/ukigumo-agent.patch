@@ -1,0 +1,31 @@
+diff --git a/lib/Ukigumo/Agent/Manager.pm b/lib/Ukigumo/Agent/Manager.pm
+index 20059f5..b8b1e41 100644
+--- a/lib/Ukigumo/Agent/Manager.pm
++++ b/lib/Ukigumo/Agent/Manager.pm
+@@ -4,7 +4,7 @@ use warnings;
+ use utf8;
+ use Ukigumo::Client;
+ use Ukigumo::Client::VC::Git;
+-use Ukigumo::Client::Executor::Perl;
++use Ukigumo::Client::Executor::Command;
+ 
+ use Mouse;
+ 
+@@ -12,7 +12,7 @@ has 'children' => ( is => 'rw', default => sub { +{ } } );
+ has 'work_dir' => ( is => 'rw', isa => 'Str', required => 1 );
+ has 'server_url' => ( is => 'rw', isa => 'Str', required => 1 );
+ has job_queue => (is => 'ro', default => sub { +[ ] });
+-has max_children => ( is => 'ro', default => 1 );
++has max_children => ( is => 'ro', default => 4 );
+ 
+ no Mouse;
+ 
+@@ -70,7 +70,7 @@ sub run_job {
+             my $client = Ukigumo::Client->new(
+                 workdir    => $self->work_dir,
+                 vc         => $vc,
+-                executor   => Ukigumo::Client::Executor::Perl->new(),
++                executor   => Ukigumo::Client::Executor::Command->new( command => "./run" ),
+                 server_url => $self->server_url,
+             );
+             $client->run();

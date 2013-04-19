@@ -1,0 +1,88 @@
+diff --git a/cpanfile b/cpanfile
+index da7a4ae..8c0d1ba 100644
+--- a/cpanfile
++++ b/cpanfile
+@@ -16,6 +16,7 @@ requires 'Time::Duration::ja' => 0;
+ requires 'Time::Duration' => 0;
+ requires 'JSON' => 2;
+ requires 'Module::Functions';
++requires 'Starlet';
+ 
+ on 'test' => sub {
+     requires 'Test::Requires' => 0;
+diff --git a/lib/Ukigumo/Server/Command/Branch.pm b/lib/Ukigumo/Server/Command/Branch.pm
+index 10c2c23..35d3aa4 100644
+--- a/lib/Ukigumo/Server/Command/Branch.pm
++++ b/lib/Ukigumo/Server/Command/Branch.pm
+@@ -68,7 +68,7 @@ sub list {
+ 
+     my @projects = do {
+         my ($sql, @binds) = 
+-            sql_interp q{SELECT DISTINCT branch.project, branch.branch AS branch, report.report_id, report.status, report.revision, report.ctime FROM branch LEFT JOIN report ON (branch.last_report_id=report.report_id) WHERE }, $args, q{ORDER BY last_report_id DESC};
++            sql_interp q{SELECT DISTINCT branch.project, branch.branch AS branch, report.report_id, report.status, report.revision, report.ctime, report.body FROM branch LEFT JOIN report ON (branch.last_report_id=report.report_id) WHERE }, $args, q{ORDER BY last_report_id DESC};
+ 
+         @{ c->dbh->selectall_arrayref( $sql, { Slice => +{} }, @binds, ) };
+     };
+diff --git a/lib/Ukigumo/Server/Command/Report.pm b/lib/Ukigumo/Server/Command/Report.pm
+index 140045e..fd4e1e3 100644
+--- a/lib/Ukigumo/Server/Command/Report.pm
++++ b/lib/Ukigumo/Server/Command/Report.pm
+@@ -40,7 +40,7 @@ sub recent_list {
+     my $args = $rule->validate(@_);
+ 
+     my $reports = c->dbh->selectall_arrayref(
+-        q{SELECT branch.project, branch.branch, report.report_id, report.revision, report.status, report.ctime
++        q{SELECT branch.project, branch.branch, report.report_id, report.revision, report.status, report.ctime, report.body
+         FROM report INNER JOIN branch ON (branch.branch_id=report.branch_id)
+         ORDER BY report_id DESC
+         LIMIT } . ($args->{limit} + 1) . " OFFSET " . $args->{limit}*($args->{page}-1),
+@@ -73,7 +73,7 @@ sub list {
+     my $args = $rule->validate(@_);
+ 
+     my $reports = c->dbh->selectall_arrayref(
+-        q{SELECT report_id, revision, status, ctime FROM report WHERE branch_id=?
++        q{SELECT report_id, revision, status, ctime, body FROM report WHERE branch_id=?
+         ORDER BY report_id DESC
+         LIMIT } . ($args->{limit} + 1) . " OFFSET " . $args->{limit}*($args->{page}-1),
+         { Slice => +{} },
+diff --git a/tmpl/include/layout.tt b/tmpl/include/layout.tt
+index 4913023..4aa7283 100644
+--- a/tmpl/include/table/project.tt
++++ b/tmpl/include/table/project.tt
+@@ -5,6 +5,7 @@
+     <th>[% l('Revision') %]</th>
+     <th>[% l('Status') %]</th>
+     <th>[% l('Date') %]</th>
++    <th>[% l('Log') %]</th>
+ </tr>
+     [% FOR v IN projects %]
+     <tr>
+@@ -17,6 +18,9 @@
+                 [% IF v.ctime < now - 24*60*60 %][old][% END %]
+             </a>
+         </td>
++        <td>
++            [% v.body.split("\n").grep("SCORE").first() %]
++        </td>
+     </tr>
+     [% END %]
+ </table>
+diff --git a/tmpl/report_list.tt b/tmpl/report_list.tt
+index bbdb022..3a3881f 100644
+--- a/tmpl/report_list.tt
++++ b/tmpl/report_list.tt
+@@ -12,12 +12,14 @@
+                 <th>[% l('Revision') %]</th>
+                 <th>[% l('Status') %]</th>
+                 <th>[% l('Date') %]</th>
++                <th>[% l('Log') %]</th>
+             </tr>
+         [% FOR v IN reports %]
+             <tr>
+                 <td>[% v.revision || '-' %]</td>
+                 <td style="color: [% v.status | status_color %]">[% v.status | status_str %] </td>
+                 <td><a href="[% uri_for('/report/' _ v.report_id) %]">[% ago(now-v.ctime, 1) %]</a></td>
++                <td>[% v.body.split("\n").grep("SCORE").first() %]</td>
+             </tr>
+         [% END %]
+         </table>
